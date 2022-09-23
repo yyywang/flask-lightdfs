@@ -7,7 +7,7 @@ import threading
 import time
 
 
-class FlaskLocalDFS:
+class FlaskLightDFS:
     _inc = 0
     _inc_lock = threading.Lock()
 

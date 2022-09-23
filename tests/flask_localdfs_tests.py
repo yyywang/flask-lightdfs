@@ -9,7 +9,7 @@ root_path = os.path.join(os.path.dirname(os.path.dirname(__file__)))
 sys.path.append(root_path)
 
 
-from client import FlaskLocalDFS
+from client import FlaskLightDFS
 from file_map import FileMap
 
 
@@ -22,18 +22,18 @@ class APP:
 
 
 def test_generate_file_key():
-    print(FlaskLocalDFS.generate_file_key())
+    print(FlaskLightDFS.generate_file_key())
 
 
 def test_hash():
-    flask_local_dfs = FlaskLocalDFS(APP())
+    flask_local_dfs = FlaskLightDFS(APP())
     file_key = flask_local_dfs.generate_file_key()
     flask_local_dfs.upload(file_key)
 
 
 def test_file_map():
-    file_map = FileMap('/data/localdfs', 'localhost', [])
-    file_map.add_record(FlaskLocalDFS.generate_file_key())
+    file_map = FileMap('/data/lightdfs', 'localhost', [])
+    file_map.add_record(FlaskLightDFS.generate_file_key())
     print(file_map.get_file_keys(file_map.local_server))
 
 
