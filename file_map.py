@@ -126,7 +126,7 @@ class FileMapLock:
             f.write(signal)
 
     @property
-    def lock_num(self):
+    def lock_signal(self):
         """lock signal"""
         pid = os.getpid()
         tid = threading.currentThread().ident
@@ -137,11 +137,11 @@ class FileMapLock:
         while self.get_lock_signal() != self.IDLE_SIGNAL:
             pass
 
-        self.set_lock_signal(self.lock_num)
+        self.set_lock_signal(self.lock_signal)
 
     def release(self):
         """release lock"""
-        if self.get_lock_signal() == self.lock_num:
+        if self.get_lock_signal() == self.lock_signal:
             self.set_lock_signal(self.IDLE_SIGNAL)
 
     def __enter__(self):
