@@ -6,7 +6,7 @@ import json
 import os
 import threading
 
-from utils import is_safe_file_key
+from .utils import is_safe_file_key
 
 FILE_KEY_MAP_LOCK_DIR = None
 

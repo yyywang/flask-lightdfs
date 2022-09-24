@@ -12,14 +12,34 @@ class FlaskLightDFS:
     _inc_lock = threading.Lock()
 
     _machine_number = 1
+    server_list = None
+    data_path = None
 
     def __init__(self, app=None):
         if app is not None:
             self.init_app(app)
 
     def init_app(self, app):
-        if app.config.get('LOCAL_DFS_MACHINE_NUMBER') is not None:
-            self._machine_number = app.config.get('LOCAL_DFS_MACHINE_NUMBER')
+        defaults = [('LOCAL_DFS_MACHINE_NUMBER', None),
+                    ('LOCAL_DFS_SERVER_LIST', None),
+                    ('LOCAL_DFS_DATA_PATH', None)]
+
+        for k, v in defaults:
+            app.config.setdefault(k, v)
+
+        if app.config['LOCAL_DFS_MACHINE_NUMBER'] is not None:
+            self._machine_number = app.config['LOCAL_DFS_MACHINE_NUMBER']
+
+        if app.config['LOCAL_DFS_SERVER_LIST'] is not None:
+            self.server_list = app.config['LOCAL_DFS_SERVER_LIST']
+
+        if app.config['LOCAL_DFS_DATA_PATH'] is None:
+            raise Exception('LOCAL_DFS_DATA_PATH is not config')
+        else:
+            if os.path.isdir(app.config['LOCAL_DFS_DATA_PATH']):
+                self.data_path = app.config['LOCAL_DFS_DATA_PATH']
+            else:
+                raise Exception('illegal LOCAL_DFS_DATA_PATH')
 
     @classmethod
     def generate_file_key(cls):
@@ -39,7 +59,8 @@ class FlaskLightDFS:
         return str(key)
 
     def upload(self, file_key):
-        pass
+        target_server_idx = hash(file_key)
+        print(target_server_idx)
 
     def download(self, file_key):
         pass
@@ -49,3 +70,5 @@ class FlaskLightDFS:
 
     def delete(self, file_key):
         pass
+
+
