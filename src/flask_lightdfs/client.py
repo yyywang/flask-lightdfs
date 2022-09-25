@@ -4,6 +4,8 @@
 """
 import os.path
 
+from werkzeug.datastructures import FileStorage
+
 from .config import LOCAL_DFS_MACHINE_NUMBER
 from .config import LOCAL_DFS_SERVER_LIST
 from .config import LOCAL_DFS_ROOT_PATH
@@ -13,17 +15,16 @@ from .snowflake.generator import DefaultIdGenerator
 
 
 class FlaskLightDFS:
-    _machine_number = None
-    server_list = None
-    root_path = None
-
-    id_generator = None
-
     subdirectory_map = {
-        'etc': 'etc'
+        'data': 'data'
     }
 
     def __init__(self, app=None):
+        self._machine_number = None
+        self.server_list = None
+        self.root_path = None
+        self.id_generator = None
+
         if app is not None:
             self.init_app(app)
 
@@ -44,41 +45,42 @@ class FlaskLightDFS:
         if app.config['LOCAL_DFS_ROOT_PATH'] is None:
             raise Exception('LOCAL_DFS_ROOT_PATH is not config')
 
-        FlaskLightDFS._machine_number = app.config['LOCAL_DFS_MACHINE_NUMBER']
-        FlaskLightDFS.server_list = app.config['LOCAL_DFS_SERVER_LIST']
-        FlaskLightDFS.root_path = app.config['LOCAL_DFS_ROOT_PATH']
+        self._machine_number = app.config['LOCAL_DFS_MACHINE_NUMBER']
+        self.server_list = app.config['LOCAL_DFS_SERVER_LIST']
+        self.root_path = app.config['LOCAL_DFS_ROOT_PATH']
 
-        FlaskLightDFS._init_dir()
-        FlaskLightDFS._init_id_generator()
+        self._init_dir()
+        self._init_id_generator()
 
-    @classmethod
-    def _init_dir(cls):
-        etc_path = cls.get_etc_path()
-        if not os.path.exists(etc_path):
-            os.mkdir(etc_path)
+    def _init_dir(self):
+        if not os.path.exists(self.data_path):
+            os.mkdir(self.data_path)
 
-    @classmethod
-    def _init_id_generator(cls):
-        options = IdGeneratorOptions(worker_id=cls._machine_number)
+    def _init_id_generator(self):
+        options = IdGeneratorOptions(worker_id=self._machine_number)
         id_gene = DefaultIdGenerator()
         id_gene.set_id_generator(options)
-        cls.id_generator = id_gene
+        self.id_generator = id_gene
 
-    @classmethod
-    def get_etc_path(cls):
-        return os.path.join(cls.root_path, cls.subdirectory_map['etc'])
+    @property
+    def data_path(self):
+        return os.path.join(self.root_path, FlaskLightDFS.subdirectory_map['data'])
 
-    @classmethod
-    def get_snowflake_path(cls):
-        return os.path.join(cls.get_etc_path(), 'snowflake')
-
-    @classmethod
-    def generate_file_key(cls):
+    def generate_file_key(self):
         """generate uploaded file key"""
-        return cls.id_generator.next_id()
+        return self.id_generator.next_id()
 
-    def upload(self, file_key):
-        pass
+    def build_file_save_path(self, file_key: [int, str]):
+        return os.path.join(self.data_path, str(file_key))
+
+    def upload(self, storage: FileStorage, file_key: str = None):
+        if not isinstance(storage, FileStorage):
+            raise TypeError("storage must be a werkzeug.FileStorage")
+
+        if file_key is None:
+            file_key = self.generate_file_key()
+
+        storage.save(self.build_file_save_path(file_key))
 
     def download(self, file_key):
         pass

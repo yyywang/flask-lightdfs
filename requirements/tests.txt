@@ -2,3 +2,4 @@ coverage==6.3.2
     # via -r requirements/tests.in
 pytest==7.1.1
     # via -r requirements/tests.in
+flask
