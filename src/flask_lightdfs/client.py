@@ -2,65 +2,83 @@
 """
   Created by 怀月 on 2022/9/21.
 """
-import os
-import threading
-import time
+import os.path
+
+from .config import LOCAL_DFS_MACHINE_NUMBER
+from .config import LOCAL_DFS_SERVER_LIST
+from .config import LOCAL_DFS_ROOT_PATH
+
+from .snowflake.options import IdGeneratorOptions
+from .snowflake.generator import DefaultIdGenerator
 
 
 class FlaskLightDFS:
-    _inc = 0
-    _inc_lock = threading.Lock()
-
-    _machine_number = 1
+    _machine_number = None
     server_list = None
-    data_path = None
+    root_path = None
+
+    id_generator = None
+
+    subdirectory_map = {
+        'etc': 'etc'
+    }
 
     def __init__(self, app=None):
         if app is not None:
             self.init_app(app)
 
     def init_app(self, app):
-        defaults = [('LOCAL_DFS_MACHINE_NUMBER', None),
-                    ('LOCAL_DFS_SERVER_LIST', None),
-                    ('LOCAL_DFS_DATA_PATH', None)]
+        defaults = [('LOCAL_DFS_MACHINE_NUMBER', LOCAL_DFS_MACHINE_NUMBER),
+                    ('LOCAL_DFS_SERVER_LIST', LOCAL_DFS_SERVER_LIST),
+                    ('LOCAL_DFS_ROOT_PATH', LOCAL_DFS_ROOT_PATH)]
 
         for k, v in defaults:
             app.config.setdefault(k, v)
 
-        if app.config['LOCAL_DFS_MACHINE_NUMBER'] is not None:
-            self._machine_number = app.config['LOCAL_DFS_MACHINE_NUMBER']
+        if app.config['LOCAL_DFS_MACHINE_NUMBER'] is None:
+            raise Exception('LOCAL_DFS_MACHINE_NUMBER is not config')
 
-        if app.config['LOCAL_DFS_SERVER_LIST'] is not None:
-            self.server_list = app.config['LOCAL_DFS_SERVER_LIST']
+        if not app.config['LOCAL_DFS_SERVER_LIST']:
+            raise Exception('LOCAL_DFS_SERVER_LIST is not config')
 
-        if app.config['LOCAL_DFS_DATA_PATH'] is None:
-            raise Exception('LOCAL_DFS_DATA_PATH is not config')
-        else:
-            if os.path.isdir(app.config['LOCAL_DFS_DATA_PATH']):
-                self.data_path = app.config['LOCAL_DFS_DATA_PATH']
-            else:
-                raise Exception('illegal LOCAL_DFS_DATA_PATH')
+        if app.config['LOCAL_DFS_ROOT_PATH'] is None:
+            raise Exception('LOCAL_DFS_ROOT_PATH is not config')
+
+        FlaskLightDFS._machine_number = app.config['LOCAL_DFS_MACHINE_NUMBER']
+        FlaskLightDFS.server_list = app.config['LOCAL_DFS_SERVER_LIST']
+        FlaskLightDFS.root_path = app.config['LOCAL_DFS_ROOT_PATH']
+
+        FlaskLightDFS._init_dir()
+        FlaskLightDFS._init_id_generator()
+
+    @classmethod
+    def _init_dir(cls):
+        etc_path = cls.get_etc_path()
+        if not os.path.exists(etc_path):
+            os.mkdir(etc_path)
+
+    @classmethod
+    def _init_id_generator(cls):
+        options = IdGeneratorOptions(worker_id=cls._machine_number)
+        id_gene = DefaultIdGenerator()
+        id_gene.set_id_generator(options)
+        cls.id_generator = id_gene
+
+    @classmethod
+    def get_etc_path(cls):
+        return os.path.join(cls.root_path, cls.subdirectory_map['etc'])
+
+    @classmethod
+    def get_snowflake_path(cls):
+        return os.path.join(cls.get_etc_path(), 'snowflake')
 
     @classmethod
     def generate_file_key(cls):
         """generate uploaded file key"""
-        # 32 bits time
-        key = (int(time.time()) & 0xffffffff) << 32
-        # 4 bits machine number
-        key |= (cls._machine_number & 0xf) << 28
-        # 8 bits pid
-        key |= (os.getpid() % 0xFF) << 20
-        # 20 bits increment number
-        cls._inc_lock.acquire()
-        key |= cls._inc
-        _inc = (cls._inc + 1) % 0xFFFFF
-        cls._inc_lock.release()
-
-        return str(key)
+        return cls.id_generator.next_id()
 
     def upload(self, file_key):
-        target_server_idx = hash(file_key)
-        print(target_server_idx)
+        pass
 
     def download(self, file_key):
         pass
@@ -70,5 +88,3 @@ class FlaskLightDFS:
 
     def delete(self, file_key):
         pass
-
-
